@@ -122,6 +122,14 @@ export const login = ErrorHandler(async (req,res,next) => {
     };
 
 
+    const match = await bcrypt.compare(req.body.password, user.password);
+
+    if(!match) {
+
+        return next(new API_Errors(`Your Password Incorrect`, 400));
+
+    };
+
 
     if(!user.confirmEmail) {
 
