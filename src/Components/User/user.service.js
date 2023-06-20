@@ -2,7 +2,7 @@ import userModel from "./user.model.js";
 import API_Errors from "../../Utils/APIErrors.js";
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-
+import sendConfirmEmail from "../../Utils/msgConfirmEmail.js";
 
 
 
@@ -95,6 +95,16 @@ export const Register = ErrorHandler(async (req,res,next) => {
     };
 
 
+    const token = jwt.sign({ 
+
+        email: req.body.email
+
+    }, process.env.SIGN_UP);
+
+
+    sendConfirmEmail(req.body.email, req.body.name, token, req.protocol, req.headers.host);
+
+
     const newUser = userModel(req.body);
     await newUser.save();
 
@@ -154,5 +164,48 @@ export const login = ErrorHandler(async (req,res,next) => {
 
 
     res.status(200).json({message: "Success", token});
+
+});
+
+
+
+
+
+
+
+
+
+// Confirm Email
+
+export const emailConfirmation = ErrorHandler(async (req,res,next) => {
+
+    const token = req.params.token;
+
+    jwt.verify(token, process.env.SIGN_UP,async function(err, decoded) {
+        
+        if(err) {
+
+            res.status(404).json({message: "Invalid Token", err});
+
+        } else {
+
+            const user = await userModel.findOne({email: decoded.email});
+
+            if(user) {
+
+                user.confirmEmail = true;
+                await user.save();
+
+                res.status(200).json({message: "Your email address has already been confirmed."});
+
+            } else {
+
+                res.status(400).json({message: "User Not Found"});
+
+            };
+
+        };
+
+    });
 
 });
