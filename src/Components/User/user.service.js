@@ -232,6 +232,14 @@ export const Authentication = () => {
 
         } else {
 
+            const user = await userModel.findOne({email: decoded.email});
+
+            if(!user) {
+
+                return next(new API_Errors(`This Is User: ${decoded.email} Is Doesn't Exists`, 400));
+
+            };
+
             req.user = decoded;
             next();
 
