@@ -209,3 +209,34 @@ export const emailConfirmation = ErrorHandler(async (req,res,next) => {
     });
 
 });
+
+
+
+
+
+
+
+
+
+// Authentication 
+
+export const Authentication = () => {
+
+    const token = req.headers.token;
+
+    jwt.verify(token, process.env.SIGN_IN,async function(err, decoded) {
+        
+        if(err) {
+
+            res.status(404).json({message: "Invalid Token", err});
+
+        } else {
+
+            req.user = decoded;
+            next();
+
+        };
+
+    });
+
+};

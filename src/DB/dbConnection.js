@@ -5,7 +5,7 @@ import mongoose from "mongoose";
 
 const dbConnection = () => {
 
-    mongoose.connect(`mongodb+srv://${process.env.DATABASE_USER}:${process.env.DATABASE_PASSWORD}@cluster0.jxdqfgq.mongodb.net/notes`).then(()=> {
+    mongoose.connect(process.env.DATABASE).then(()=> {
 
         console.log("DB Connection Successfully");
 
