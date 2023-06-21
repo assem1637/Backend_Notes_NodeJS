@@ -220,7 +220,7 @@ export const emailConfirmation = ErrorHandler(async (req,res,next) => {
 
 // Authentication 
 
-export const Authentication = () => {
+export const Authentication = ErrorHandler(async (req,res,next) => {
 
     const token = req.headers.token;
 
@@ -247,4 +247,109 @@ export const Authentication = () => {
 
     });
 
-};
+});
+
+
+
+
+
+
+
+
+// Update Info Of User
+
+export const updateInfo = ErrorHandler(async (req,res,next) => {
+
+    let user = await userModel.findOne({email: req.user.email});
+
+    if(!user) {
+
+        return next(new API_Errors(`This Is User: ${req.user.email} Is Doesn't Exists`, 400));
+
+    };
+
+
+    if(req.body.password) {
+
+        if(req.body.password !== req.body.rePassword) {
+
+            return next(new API_Errors(`Password And rePassword Doesn't Match`, 400));
+    
+        };
+    
+    
+    
+        const hash = bcrypt.hashSync(req.body.password, 5);
+        req.body.password = hash;
+        req.body.rePassword = hash;
+
+    };
+
+
+
+    if(req.file) {
+
+        cloudinary.v2.uploader.upload(req.file,
+        { public_id: "olympic_flag" }, 
+        function(error, result) {
+
+            if(error) {
+
+                console.log(error);
+
+            } else {
+
+                console.log(result); 
+
+            };
+
+        });
+
+    };
+
+
+
+    if(req.body.phone) {
+
+        if(!(req.body.phone).match(/^(010|011|012|015)[0-9]{8}$/)) {
+
+            return next(new API_Errors("Please, Enter The Egyption Phone Valid", 400));
+
+        };
+
+    };
+
+
+
+    if(req.body.email) {
+
+
+        const token = jwt.sign({ 
+
+            email: req.body.email
+    
+        }, process.env.SIGN_UP);
+    
+    
+        sendConfirmEmail(req.body.email, user.name, token, req.protocol, req.headers.host);
+
+        user.confirmEmail = false;
+
+    };
+
+    
+
+    user = await userModel.findOneAndUpdate({email: req.user.email}, req.body , {new: true});
+
+    if(req.body.email) {
+
+        res.status(200).json({message: "Success Updated, Check Your Email To Confirm It", data: user});
+
+    } else {
+
+        res.status(200).json({message: "Success Updated", data: user});
+
+    };
+
+
+});
