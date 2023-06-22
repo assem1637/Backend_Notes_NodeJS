@@ -3,7 +3,7 @@ import API_Errors from "../../Utils/APIErrors.js";
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import sendConfirmEmail from "../../Utils/msgConfirmEmail.js";
-
+import sendResetCode from "../../Utils/msgResetPassword.js";
 
 
 
@@ -240,6 +240,14 @@ export const Authentication = ErrorHandler(async (req,res,next) => {
 
             };
 
+        
+            if(parseInt(user.changePasswordAt / 1000)  > decoded.iat) {
+
+                return next(new API_Errors(`You Change Password At: ${user.changePasswordAt}`, 400));
+
+            };
+            
+
             req.user = decoded;
             next();
 
@@ -282,6 +290,8 @@ export const updateInfo = ErrorHandler(async (req,res,next) => {
         const hash = bcrypt.hashSync(req.body.password, 5);
         req.body.password = hash;
         req.body.rePassword = hash;
+
+        user.changePasswordAt = Date.now();
 
     };
 
@@ -351,5 +361,160 @@ export const updateInfo = ErrorHandler(async (req,res,next) => {
 
     };
 
+
+});
+
+
+
+
+
+
+
+
+
+
+// Reset Password
+
+export const resetPassword = ErrorHandler(async (req,res,next) => {
+
+    const user = await userModel.findOne({email: req.body.email});
+
+    if(!user) {
+
+        return next(new API_Errors(`This Is User: ${req.body.email} Is Doesn't Exists`, 400));
+
+    };
+
+
+    const resetCode = parseInt(Math.random() * 1000000);
+
+    const hash = bcrypt.hashSync(resetCode.toString(), 5);
+
+    sendResetCode(user.email, user.name, resetCode);
+
+    user.resetCode = hash;
+    await user.save();
+
+
+    const token = jwt.sign({ 
+
+        email: user.email
+
+    }, process.env.RESET_PASSWORD);
+
+
+
+    res.status(200).json({message: "Success Send Reset Code", token});
+
+});
+
+
+
+
+
+
+
+// Confirm Reset Code 
+
+export const confirmResetCode = ErrorHandler(async (req,res,next) => {
+
+
+    jwt.verify(req.params.token, process.env.RESET_PASSWORD,async function(err, decoded) {
+        
+        if(err) {
+
+            res.status(404).json({message: "Invalid Token", err});
+
+        } else {
+
+            const user = await userModel.findOne({email: decoded.email});
+
+            if(!user) {
+
+                return next(new API_Errors(`This Is User: ${decoded.email} Is Doesn't Exists`, 400));
+
+            };
+
+            const match = await bcrypt.compare(req.body.resetCode, user.resetCode);
+
+            if(!match) {
+
+                return next(new API_Errors(`Invalid Reset Code`, 400));
+
+            };
+
+
+            const token = jwt.sign({ 
+
+                email: user.email
+        
+            }, process.env.CONFIRM_RESET_CODE);
+        
+        
+        
+            res.status(200).json({message: "Success Confirm Reset Code", token});
+
+
+        };
+
+    });
+
+});
+
+
+
+
+
+
+
+// Change Password After Confirm Reset Code
+
+export const changePasswordAfterConfirm = ErrorHandler(async (req,res,next) => {
+
+
+    jwt.verify(req.params.token, process.env.CONFIRM_RESET_CODE,async function(err, decoded) {
+        
+        if(err) {
+
+            res.status(404).json({message: "Invalid Token", err});
+
+        } else {
+
+            const user = await userModel.findOne({email: decoded.email});
+
+            if(!user) {
+
+                return next(new API_Errors(`This Is User: ${decoded.email} Is Doesn't Exists`, 400));
+
+            };
+
+
+            if(!req.body.password && !req.body.rePassword) {
+
+                return next(new API_Errors(`Not Found Password And rePassword`, 400));
+        
+            };
+
+
+            if(req.body.password !== req.body.rePassword) {
+        
+                return next(new API_Errors(`Password And rePassword Doesn't Match`, 400));
+        
+            };
+        
+        
+            const hash = bcrypt.hashSync(req.body.password, 5);
+            user.password = hash;
+            user.rePassword = hash;
+
+            user.resetCode = undefined;
+
+            user.changePasswordAt = Date.now();
+        
+            res.status(200).json({message: "Success Change Password, Try Login Now"});
+
+        };
+
+    });
 
 });
