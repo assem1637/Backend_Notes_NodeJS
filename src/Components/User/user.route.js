@@ -1,5 +1,5 @@
-import {Router} from 'express';
-import {Register, login, emailConfirmation, updateInfo, resetPassword, confirmResetCode, changePasswordAfterConfirm} from './user.service.js';
+import { Router } from 'express';
+import { Register, login, emailConfirmation, updateInfo, resetPassword, confirmResetCode, changePasswordAfterConfirm } from './user.service.js';
 import upLoadImg from '../../Utils/UploadImg.js';
 import { Authentication } from './user.service.js';
 
